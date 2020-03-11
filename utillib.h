@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdint.h>
+#include <time.h>
 
 #if !defined(BUFSIZE)
 #define BUFSIZE 256

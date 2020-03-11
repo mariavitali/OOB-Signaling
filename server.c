@@ -50,6 +50,7 @@ void cleanup(){
 
 void executeServer();
 int estimate(int fdClient);
+int member(uint64_t id, est_t* list);
 
 
 
@@ -75,30 +76,33 @@ int main(int argc, char* argv[]){
 
     //id number of server
     errno = 0;
-    servernum = (strtol(argv[1], NULL, 10)) + 1;        //between 1 and k
-    //servernum = (int)(*argv[1]) + 1;
+    //servernum = (strtol(argv[1], NULL, 10)) + 1;        //between 1 and k
+    servernum = (int)(*argv[1]) + 1;
     if(errno != 0){
         fprintf(stderr, "strtol error\n");
         exit(errno);
     }
 
     //fd pipe server-supervisor
-    pipess = strtol(argv[2], NULL, 10);
-    //int pipess = (int)(*argv[2]);
+    //pipess = strtol(argv[2], NULL, 10);
+    pipess = (int)(*argv[2]);
     if(errno != 0){
         fprintf(stderr, "strtol error\n");
         exit(errno);
     }
 
+    unlink(socketname);
 
     socketname = malloc(32 * sizeof(char));
     sprintf(socketname, "OOB-server-%d", servernum);
+    fprintf(stdout, "servername %s\n", socketname);
 
     executeServer();
 
     //atexit pulizia
     atexit(cleanup);
 
+    return 0;
 
 }
 
@@ -113,6 +117,8 @@ void executeServer(){
 /**************************************************SOCKET CONNECTI0N SET UP***************************************************************/
 
     int fdServerSocket;     // listening socket
+
+    unlink(socketname);
 
     struct sockaddr_un address;
     strncpy(address.sun_path, socketname, UNIX_PATH_MAX);
@@ -135,11 +141,11 @@ void executeServer(){
     int index;       //index to check select results
     fd_set set;     //active file descriptors set
     fd_set rdset;      //file descriptors to check for reading
-    int nread;      //read characters
     nClients = 0;   //number of clients currently connected
 
     if(fdServerSocket > fdmax)
         fdmax = fdServerSocket;
+    fprintf(stdout, "fd max è %d\n", fdmax);
     
     FD_ZERO(&set);      //set to zero
     FD_ZERO(&rdset);
@@ -149,12 +155,14 @@ void executeServer(){
         //get select mask ready (at every new iteration, cause is modified by select)
         rdset = set;
         SYSCALL(select(fdmax+1, &rdset, NULL, NULL, NULL), "select");
+        
 
         //check for new requests from file descriptors
-        for(int i=0; i<fdmax; i++){
-            if(FD_ISSET(i, &rdset)){
+        for(index=0; index<=fdmax; index++){
+            if(FD_ISSET(index, &rdset)){
+                fprintf(stdout, "SERVER %d: ho riconociuto che è cambiato qualcosa nella select (nel set)\n", servernum);
                 int fdClient;
-                if(i == fdServerSocket){
+                if(index == fdServerSocket){
                     //new connection request, accept connection
                     SYSCALL((fdClient = accept(fdServerSocket, (struct sockaddr*)NULL, NULL)), "accept");
 
@@ -166,7 +174,7 @@ void executeServer(){
                 }
                 else{
                     //new read request
-                    fdClient = i;
+                    fdClient = index;
                     if((estimate(fdClient)) != 0){
                         close(fdClient);
                         FD_CLR(fdClient, &set);
@@ -185,7 +193,6 @@ void executeServer(){
 
     //LIBERARE LA MEMORIAAAA
     SYSCALL(close(fdServerSocket), "close");
-    return 0;
 
 }
 
@@ -195,12 +202,12 @@ int estimate(int fdClient){
     msg_t message;
     int index;          //index of client in connectedClients
 
-    if(readn(fdClient, (int)&message.len, sizeof(int)) < 0){     // nel nostro caso viene mandato 8 oppure 0
+    if(readn(fdClient, &message.len, sizeof(int)) < 0){     // nel nostro caso viene mandato 8 oppure 0
         perror("read");
         return -1;
     }
 
-    if(readn(fdClient, (uint64_t)&message.id, ID_SIZE) < 0){
+    if(readn(fdClient, &message.id, ID_SIZE) < 0){
         perror("read");
         return -1;
     }
@@ -212,7 +219,7 @@ int estimate(int fdClient){
         //client closed connection
         
         if((index = member(newClientID, connectedClients)) >= 0){
-            fprintf(stdout, "SERVER %d CLOSING %ld ESTIMATE %d\n", servernum, connectedClients[index].client_id, connectedClients[index].estSecret);
+            fprintf(stdout, "SERVER %d CLOSING %lx ESTIMATE %d\n", servernum, connectedClients[index].client_id, connectedClients[index].estSecret);
 
             //create new info structure
             info* newinfo = malloc(sizeof(info));
@@ -250,7 +257,7 @@ int estimate(int fdClient){
 
         //add new client at the end of the array
         connectedClients[nClients-1].client_id = newClientID;
-        connectedClients[nClients-1].t = (int)time(NULL);
+        connectedClients[nClients-1].t = (int)time(NULL) * 1000;
         connectedClients[nClients-1].estSecret = -1;
         fprintf(stdout, "SERVER\t%d\tINCOMING FROM\t%lx\t@\t%d\n", servernum, connectedClients[nClients-1].client_id, connectedClients[nClients-1].t);
     }

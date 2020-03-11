@@ -15,8 +15,14 @@
 #include "utilconn.h"
 #include "utillib.h"
 
+uint64_t rand64bit();
+void connectToServers(int p, int k);
+void sendMessages(int w, int p, uint64_t id);
+
+
+
 int* selectedServers;           //p servers to connect to
-struct timespec t;
+static struct timespec t;
 
 int main(int argc, char* argv[]){
 
@@ -68,8 +74,9 @@ int main(int argc, char* argv[]){
     fprintf(stdout, "CLIENT %lx SECRET %d\n", id, secret);
 
     //initialize structure timespec for nanosleep based on secret
-    t.tv_nsec = secret * 1000000;
-    t.tv_sec = 0;
+    
+    t.tv_sec = (int)(secret/1000);
+    t.tv_nsec = (secret % 1000) * 1000000;
 
     CHECKNULL((selectedServers = malloc(p*sizeof(int))), "malloc");
     connectToServers(p, k);
@@ -98,6 +105,7 @@ void connectToServers(int p, int k){
     RANDOMIZE;
 
     for(int i=0; i<p; i++){
+        fprintf(stdout, "sono nel ciclo di connectToServers\n");
         struct sockaddr_un serverAddress;
         memset(&serverAddress, 0, sizeof(serverAddress));
 
@@ -117,6 +125,7 @@ void connectToServers(int p, int k){
             }
         }
 
+        fprintf(stdout, "connected to server %d\n", numserver);
 
     }
 
@@ -134,6 +143,8 @@ void sendMessages(int w, int p, uint64_t id){
         random = RANDOM(p);
         len = ID_SIZE;
 
+        fprintf(stdout, "sending to server %d the length %d and the id %lx\n", selectedServers[random], len, id_nbo);
+
         writen(selectedServers[random], &len, sizeof(int));
         writen(selectedServers[random], &id_nbo, ID_SIZE);
 
@@ -145,6 +156,8 @@ void sendMessages(int w, int p, uint64_t id){
     //close client
     for(int i= 0; i<p; i++){
         len = 0;
+        fprintf(stdout, "sending to server %d the length %d and the id %lx\n", selectedServers[random], len, id_nbo);
+
         writen(selectedServers[random], &len, sizeof(int));
         writen(selectedServers[random], &id_nbo, ID_SIZE);
 

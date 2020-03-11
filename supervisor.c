@@ -17,7 +17,7 @@ static int k;                          //number of servers
 
 void manageServer(int k);
 static infotable updateInfotable(infotable t, info newinfo);
-static void sigIntHandler(int signum);
+static void sigIntManager(int signum);
 static void setHandler();
 void closeSupervisor();
 
@@ -89,6 +89,9 @@ void manageServer(int k){
             int flags = fcntl(pipeServer[i].fd[0], F_GETFL, 0);
             fcntl(pipeServer[i].fd[0], F_SETFL, flags | O_NONBLOCK);
 
+            fprintf(stdout, "supervisor fatto. ora aspetto per la lettura\n");
+
+
         }
     }
 
@@ -106,7 +109,6 @@ void manageServer(int k){
             fprintf(stdout, "SUPERVISOR ESTIMATE\t%d\tFOR\t%lx\tFROM\t%d\n", received.estimatedSecret, received.client_id, randomIndex+1);
             //update info table
             table = updateInfotable(table, received);
-            fflush(pipeServer[randomIndex].fd[0]);
         }
     }  
 
