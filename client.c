@@ -103,6 +103,7 @@ uint64_t rand64bit()
 void connectToServers(int p, int k){
 
     RANDOMIZE;
+    int noduplicate[p];
 
     for(int i=0; i<p; i++){
         fprintf(stdout, "sono nel ciclo di connectToServers\n");
@@ -112,7 +113,15 @@ void connectToServers(int p, int k){
         SYSCALL((selectedServers[i] = socket(DOMAIN, SOCK_STREAM, 0)), "creating socket");
 
         //select 1 server (ATTENZIONE: SE GENERO LO STESSO NUMERO 2 VOLTE CONSECUTIVE, CHE SUCCEDE?)
-        int numserver = RANDOM(k) + 1;      //between 1 and k
+        int numserver, ok=0;;
+        while(!ok){
+            numserver = RANDOM(k) + 1;      //between 1 and k
+            ok = 1;
+            for(int j = 0; j < i; j++){
+                if(numserver == noduplicate[j]) ok = 0;
+            }
+        }
+        if(ok) noduplicate[i] = numserver;
         serverAddress.sun_family = DOMAIN;
         sprintf(serverAddress.sun_path, "OOB-server-%d", numserver);
 
@@ -154,12 +163,12 @@ void sendMessages(int w, int p, uint64_t id){
     }
 
     //close client
-    for(int i= 0; i<p; i++){
+    for(int i = 0; i<p; i++){
         len = 0;
         fprintf(stdout, "sending to server %d the length %d and the id %lx\n", selectedServers[random], len, id_nbo);
 
-        writen(selectedServers[random], &len, sizeof(int));
-        writen(selectedServers[random], &id_nbo, ID_SIZE);
+        writen(selectedServers[i], &len, sizeof(int));
+        writen(selectedServers[i], &id_nbo, ID_SIZE);
 
         SYSCALL((close(selectedServers[i])), "close selectedServer");
     }
