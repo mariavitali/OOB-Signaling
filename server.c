@@ -176,6 +176,7 @@ void executeServer(){
                     //new read request
                     fdClient = index;
                     if((estimate(fdClient)) != 0){
+                        //exit(0);
                         close(fdClient);
                         FD_CLR(fdClient, &set);
 
@@ -207,6 +208,8 @@ int estimate(int fdClient){
         return -1;
     }
 
+    printf("len: %d\n", message.len);
+
     if(readn(fdClient, &message.id, ID_SIZE) < 0){
         perror("read");
         return -1;
@@ -215,11 +218,12 @@ int estimate(int fdClient){
     //conversion from network byte order to host byte order
     uint64_t newClientID = NTOHLL(message.id);
 
-    if(message.len == 0){
+    if(message.len <= 0){
         //client closed connection
         
         if((index = member(newClientID, connectedClients)) >= 0){
             fprintf(stdout, "SERVER %d CLOSING %lx ESTIMATE %d\n", servernum, connectedClients[index].client_id, connectedClients[index].estSecret);
+            //exit(0);
 
             //create new info structure
             info* newinfo = malloc(sizeof(info));
