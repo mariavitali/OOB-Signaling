@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <time.h>
+#include <math.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -17,8 +18,7 @@
 #include "utilconn.h"
 
 
-#define UNIX_PATH_MAX 108
-
+//global variables
 int servernum;
 int pipess;              //pipe server-supervisor
 char* socketname;
@@ -27,30 +27,13 @@ static int nClients;
 
 static volatile sig_atomic_t terminate=0;
 
-static void sighandler(int useless) {    
-    terminate=1;
-}
 
-
-// update max file descriptor
-int updatemax(fd_set set, int fdmax) {
-    for(int i=(fdmax-1);i>=0;--i)
-	if (FD_ISSET(i, &set)) return i;
-    return -1;
-}
-
-void cleanup(){
-    unlink(socketname);
-    if(nClients > 0){
-        free(connectedClients);
-    }
-
-}
-
-
+static void sighandler(int useless);
 void executeServer();
 int estimate(int fdClient);
+int updatemax(fd_set set, int fdmax);
 int member(uint64_t id, est_t* list);
+void cleanup();
 
 
 
@@ -69,10 +52,11 @@ int main(int argc, char* argv[]){
     SYSCALL((sigaction(SIGTERM, &action, NULL)), "sigaction");
 
     //set SIGPIPE ignore
-    struct sigaction p;
-    memset(&p, 0, sizeof(p));
-    p.sa_handler = SIG_IGN;
-    SYSCALL((sigaction(SIGPIPE, &p, NULL)), "sigaction ignore pipe");
+    struct sigaction ig;
+    memset(&ig, 0, sizeof(ig));
+    ig.sa_handler = SIG_IGN;
+    SYSCALL((sigaction(SIGPIPE, &ig, NULL)), "sigaction ignore pipe");
+    SYSCALL((sigaction(SIGINT, &ig, NULL)), "sigaction ignore sigint");
 
     //id number of server
     errno = 0;
@@ -104,6 +88,11 @@ int main(int argc, char* argv[]){
 
     return 0;
 
+}
+
+
+static void sighandler(int useless) {    
+    terminate=1;
 }
 
 
@@ -160,7 +149,6 @@ void executeServer(){
         //check for new requests from file descriptors
         for(index=0; index<=fdmax; index++){
             if(FD_ISSET(index, &rdset)){
-                fprintf(stdout, "SERVER %d: ho riconociuto che è cambiato qualcosa nella select (nel set)\n", servernum);
                 int fdClient;
                 if(index == fdServerSocket){
                     //new connection request, accept connection
@@ -223,21 +211,20 @@ int estimate(int fdClient){
         
         if((index = member(newClientID, connectedClients)) >= 0){
             fprintf(stdout, "SERVER %d CLOSING %lx ESTIMATE %d\n", servernum, connectedClients[index].client_id, connectedClients[index].estSecret);
-            //exit(0);
 
             //create new info structure
-            info* newinfo = malloc(sizeof(info));
-            newinfo->client_id = connectedClients[index].client_id;
-            newinfo->estimatedSecret = connectedClients[index].estSecret;
-            newinfo->nServer = 1;
-            newinfo->next = NULL;
+            info newinfo;
+            newinfo.client_id = connectedClients[index].client_id;
+            newinfo.estimatedSecret = connectedClients[index].estSecret;
+            newinfo.nServer = 1;
+            newinfo.next = NULL;
             //send estimated secret to supervisor (if estimate > 0)
-            if((write(pipess, newinfo, sizeof(newinfo))) < 0){
+            if((write(pipess, &newinfo, sizeof(newinfo))) < 0){
                 perror("write");
                 exit(EXIT_FAILURE);
             }
 
-            free(newinfo);
+            //free(newinfo);
             //delete client from connectedClients
             est_t tmp;
             tmp = connectedClients[index];
@@ -249,28 +236,35 @@ int estimate(int fdClient){
     }
 
     //nuova stima ricevuta
+    long ms;
+    struct timespec spec;
+    clock_gettime(CLOCK_REALTIME, &spec);
+    ms = (long)(spec.tv_sec * 1000) + (long)(spec.tv_nsec / 1.0e6);
+
     if((index = member(newClientID, connectedClients)) < 0){         //new client
         nClients = nClients + 1;
 
         //first client
         if(nClients == 1){
-            CHECKNULL((malloc(sizeof(est_t))), "malloc");
+            CHECKNULL((connectedClients=malloc(sizeof(est_t))), "malloc");
         }
         //reallocation of memory
         else CHECKNULL((realloc((est_t*)connectedClients, nClients*sizeof(est_t))), "realloc");
 
+        //CALCOLO DEL TEMPO CORRENTE IN MILLISECONDI
+
         //add new client at the end of the array
         connectedClients[nClients-1].client_id = newClientID;
-        connectedClients[nClients-1].t = (int)time(NULL) * 1000;
+        connectedClients[nClients-1].t = ms;
         connectedClients[nClients-1].estSecret = -1;
-        fprintf(stdout, "SERVER\t%d\tINCOMING FROM\t%lx\t@\t%d\n", servernum, connectedClients[nClients-1].client_id, connectedClients[nClients-1].t);
+        fprintf(stdout, "SERVER\t%d\tINCOMING FROM\t%lx\t@\t%ld\n", servernum, connectedClients[nClients-1].client_id, connectedClients[nClients-1].t);
     }
     else{       //already in the list, index >= 0
-        int curr_time = ((int)time(NULL)) * 1000;
 
-        fprintf(stdout, "SERVER\t%d\tINCOMING FROM\t%lx\t@\t%d\n", servernum, connectedClients[index].client_id, connectedClients[index].t);
+        fprintf(stdout, "SERVER\t%d\tINCOMING FROM\t%lx\t@\t%ld\n", servernum, connectedClients[index].client_id, ms);
 
-        int tmp_est = curr_time - connectedClients[index].t;
+        int tmp_est = (int)(ms - connectedClients[index].t);
+        connectedClients[index].t = ms;
         if(connectedClients[index].estSecret < 0)
             connectedClients[index].estSecret = tmp_est;
         else{
@@ -286,10 +280,27 @@ int estimate(int fdClient){
 }
 
 
+// update max file descriptor
+int updatemax(fd_set set, int fdmax) {
+    for(int i=(fdmax-1);i>=0;--i)
+	if (FD_ISSET(i, &set)) return i;
+    return -1;
+}
+
+
 int member(uint64_t id, est_t* list){
     for(int i = 0; i < nClients; i++){
         if(list[i].client_id == id) 
             return i;
     }
     return -1;
+}
+
+
+void cleanup(){
+    unlink(socketname);
+    if(nClients > 0){
+        free(connectedClients);
+    }
+
 }
