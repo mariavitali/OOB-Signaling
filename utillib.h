@@ -76,7 +76,7 @@ typedef struct pipefd{
 //struttura dati per memorizzare le stime del server
 typedef struct estimate{
     uint64_t client_id;
-    int t;      //number of seconds since the epoch
+    long t;      //number of milliseconds seconds since the epoch
     int estSecret;
 }est_t;
 
