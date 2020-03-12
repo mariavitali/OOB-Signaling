@@ -24,7 +24,9 @@ void closeSupervisor();
 
 
 int main(int argc, char* argv[]){
-          
+    //initialize all variables
+    pipeServer = NULL;
+    pidServer = NULL;          
     table = NULL;
 
     /*  check for correct main arguments
@@ -89,9 +91,6 @@ void manageServer(int k){
             int flags = fcntl(pipeServer[i].fd[0], F_GETFL, 0);
             fcntl(pipeServer[i].fd[0], F_SETFL, flags | O_NONBLOCK);
 
-            fprintf(stdout, "supervisor fatto. ora aspetto per la lettura\n");
-
-
         }
     }
 
@@ -100,8 +99,12 @@ void manageServer(int k){
     while(1){
         //check read random pipe
         int randomIndex = RANDOM(k);
-        int nread;
+        int nread = 0;;
         info received;
+        received.client_id = 0;
+        received.estimatedSecret = -1;
+        received.nServer = 0;
+        received.next = NULL;
 
         //read from pipe
         nread = read(pipeServer[randomIndex].fd[0], &received, sizeof(info));
@@ -150,7 +153,10 @@ static infotable updateInfotable(infotable t, info newinfo){
     //element already in the list: update estimate (if needed)
     else{
         curr->nServer++;
-        if(newinfo.estimatedSecret < curr->estimatedSecret){
+        if(curr->estimatedSecret < 0){          //had not received any estimate before
+            curr->estimatedSecret = newinfo.estimatedSecret;
+        }
+        else if(newinfo.estimatedSecret < curr->estimatedSecret){
             curr->estimatedSecret = newinfo.estimatedSecret;
         }
     }
@@ -200,7 +206,14 @@ void closeSupervisor(){
         SYSCALL(close(pipeServer[i].fd[0]), "close pipe");
     }
 
-    free(table);
+    infotable curr = table;
+    while(curr != NULL){
+        table = curr->next;
+        free(curr);
+        curr = table;
+    }
+
+    //free(table);
     free(pidServer);
     free(pipeServer);
     _exit(0);
