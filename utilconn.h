@@ -15,7 +15,8 @@
 
 #define DOMAIN AF_UNIX
 #define MAXBACKLOG   32
-#define ID_SIZE 8   //64 bit
+#define UNIX_PATH_MAX 108
+#define ID_SIZE 8               //64 bit
 
 #if !defined(BUFSIZE)
 #define BUFSIZE 256
