@@ -83,6 +83,7 @@ int main(int argc, char* argv[]){
     sendMessages(w, p, id);
 
     fprintf(stdout, "CLIENT %lx DONE.\n", id);
+    free(selectedServers);
     //LIBERARE MEMORIAAAAAAA (SE NECESSARIO)
     return 0;
 
@@ -106,7 +107,6 @@ void connectToServers(int p, int k){
     int noduplicate[p];
 
     for(int i=0; i<p; i++){
-        fprintf(stdout, "sono nel ciclo di connectToServers\n");
         struct sockaddr_un serverAddress;
         memset(&serverAddress, 0, sizeof(serverAddress));
 
@@ -152,8 +152,9 @@ void sendMessages(int w, int p, uint64_t id){
         random = RANDOM(p);
         len = ID_SIZE;
 
-        fprintf(stdout, "sending to server %d the length %d and the id %lx\n", selectedServers[random], len, id_nbo);
+        fprintf(stdout, "sending to server on file descriptor %d the length %d and the id %lx\n", selectedServers[random], len, id_nbo);
 
+        //GESTIRE CHIUSURA DEL SERVER -- SIGNAL SIGPIPE (perchè quando killo il server vengono eliminate le socket in lettura quindi scrivo su un file descriptor che non ha lettori-->sigpipe)
         writen(selectedServers[random], &len, sizeof(int));
         writen(selectedServers[random], &id_nbo, ID_SIZE);
 
@@ -165,7 +166,7 @@ void sendMessages(int w, int p, uint64_t id){
     //close client
     for(int i = 0; i<p; i++){
         len = 0;
-        fprintf(stdout, "sending to server %d the length %d and the id %lx\n", selectedServers[random], len, id_nbo);
+        fprintf(stdout, "sending to server on file descriptor %d the length %d and the id %lx\n", selectedServers[i], len, id_nbo);
 
         writen(selectedServers[i], &len, sizeof(int));
         writen(selectedServers[i], &id_nbo, ID_SIZE);
