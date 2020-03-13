@@ -51,7 +51,7 @@ int main(int argc, char* argv[]){
     action.sa_handler = sighandler;
     SYSCALL((sigaction(SIGTERM, &action, NULL)), "sigaction");
 
-    //set SIGPIPE ignore
+    //ignore SIGPIPE and SIGINT
     struct sigaction ig;
     memset(&ig, 0, sizeof(ig));
     ig.sa_handler = SIG_IGN;
@@ -59,16 +59,14 @@ int main(int argc, char* argv[]){
     SYSCALL((sigaction(SIGINT, &ig, NULL)), "sigaction ignore sigint");
 
     //id number of server
-    errno = 0;
-    //servernum = (strtol(argv[1], NULL, 10)) + 1;        //between 1 and k
-    servernum = (int)(*argv[1]) + 1;
+    errno = 0;      
+    servernum = (int)(*argv[1]) + 1;     //between 1 and k
     if(errno != 0){
         fprintf(stderr, "strtol error\n");
         exit(errno);
     }
 
     //fd pipe server-supervisor
-    //pipess = strtol(argv[2], NULL, 10);
     pipess = (int)(*argv[2]);
     if(errno != 0){
         fprintf(stderr, "strtol error\n");
@@ -180,7 +178,6 @@ void executeServer(){
 
     }
 
-    //LIBERARE LA MEMORIAAAA
     SYSCALL(close(fdServerSocket), "close");
 
 }
