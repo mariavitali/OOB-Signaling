@@ -9,12 +9,14 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/select.h>
+#include <signal.h>
 #include <arpa/inet.h>
 
 
 #include "utilconn.h"
 #include "utillib.h"
 
+static void sigPipeManager(int signum);
 uint64_t rand64bit();
 void connectToServers(int p, int k);
 void sendMessages(int w, int p, uint64_t id);
@@ -33,9 +35,16 @@ int main(int argc, char* argv[]){
     
     //check main arguments
     if(argc < 4){
-        fprintf(stderr, "Use: %s p k w (int)\np = number of server to connect to\nk = number of available servers\nw = number of messages to send\n", argv[0]);
+        fprintf(stderr, "Use: %s p k w (int)\np = number of servers to connect to\nk = number of available servers\nw = number of messages to send\n", argv[0]);
         exit(EXIT_FAILURE);
     }
+
+    //SIGPIPE handler ----> spiegare perchè è necessario nella relazione
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = sigPipeManager;
+    SYSCALL((sigaction(SIGPIPE, &sa, NULL)), "sigaction");
+    
 
     //convert to int
     errno = 0;
@@ -84,9 +93,15 @@ int main(int argc, char* argv[]){
 
     fprintf(stdout, "CLIENT %lx DONE.\n", id);
     free(selectedServers);
-    //LIBERARE MEMORIAAAAAAA (SE NECESSARIO)
+    
     return 0;
 
+}
+
+static void sigPipeManager(int signum){
+    //cleanup and exit
+    free(selectedServers);
+    _exit(0);
 }
 
 
@@ -112,7 +127,7 @@ void connectToServers(int p, int k){
 
         SYSCALL((selectedServers[i] = socket(DOMAIN, SOCK_STREAM, 0)), "creating socket");
 
-        //select 1 server (ATTENZIONE: SE GENERO LO STESSO NUMERO 2 VOLTE CONSECUTIVE, CHE SUCCEDE?)
+        //select 1 server (must be different from the ones already selected)
         int numserver, ok=0;;
         while(!ok){
             numserver = RANDOM(k) + 1;      //between 1 and k
@@ -134,7 +149,7 @@ void connectToServers(int p, int k){
             }
         }
 
-        fprintf(stdout, "connected to server %d\n", numserver);
+        //fprintf(stdout, "connected to server %d\n", numserver);
 
     }
 
@@ -152,9 +167,8 @@ void sendMessages(int w, int p, uint64_t id){
         random = RANDOM(p);
         len = ID_SIZE;
 
-        fprintf(stdout, "sending to server on file descriptor %d the length %d and the id %lx\n", selectedServers[random], len, id_nbo);
+        //fprintf(stdout, "[CLIENT] sending length %d and id %lx\n", len, id_nbo);
 
-        //GESTIRE CHIUSURA DEL SERVER -- SIGNAL SIGPIPE (perchè quando killo il server vengono eliminate le socket in lettura quindi scrivo su un file descriptor che non ha lettori-->sigpipe)
         writen(selectedServers[random], &len, sizeof(int));
         writen(selectedServers[random], &id_nbo, ID_SIZE);
 
@@ -166,7 +180,7 @@ void sendMessages(int w, int p, uint64_t id){
     //close client
     for(int i = 0; i<p; i++){
         len = 0;
-        fprintf(stdout, "sending to server on file descriptor %d the length %d and the id %lx\n", selectedServers[i], len, id_nbo);
+        //fprintf(stdout, "[CLIENT] sending length %d and id %lx\n", len, id_nbo);
 
         writen(selectedServers[i], &len, sizeof(int));
         writen(selectedServers[i], &id_nbo, ID_SIZE);
