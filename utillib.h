@@ -95,7 +95,7 @@ void printInfotable(infotable t, FILE* where){
     infotable curr;
     curr = t;
     while(curr != NULL){
-        fprintf(where, "SUPERVISOR ESTIMATE\t%d\tFOR\t%lx\tBASED ON\t%d\n", curr->estimatedSecret, curr->client_id, curr->nServer);
+        fprintf(where, "SUPERVISOR ESTIMATE %d FOR %lx BASED ON %d\n", curr->estimatedSecret, curr->client_id, curr->nServer);
         curr = curr->next;
     }
 }
