@@ -109,7 +109,7 @@ void manageServer(int k){
         //read from pipe
         nread = read(pipeServer[randomIndex].fd[0], &received, sizeof(info));
         if(nread > 0){
-            fprintf(stdout, "SUPERVISOR ESTIMATE\t%d\tFOR\t%lx\tFROM\t%d\n", received.estimatedSecret, received.client_id, randomIndex+1);
+            fprintf(stdout, "SUPERVISOR ESTIMATE %d FOR %lx FROM %d\n", received.estimatedSecret, received.client_id, randomIndex+1);
             //update info table
             table = updateInfotable(table, received);
         }
