@@ -39,6 +39,9 @@ void cleanup();
 
 int main(int argc, char* argv[]){
 
+    //atexit pulizia
+    atexit(cleanup);
+
     //check main arguments
     if(argc < 3){
         fprintf(stderr, "%s must have 3 arguments: %s id_server_number  fd_pipe_server-supervisor\n", argv[0], argv[0]);
@@ -81,11 +84,7 @@ int main(int argc, char* argv[]){
 
     executeServer();
 
-    //atexit pulizia
-    atexit(cleanup);
-
     return 0;
-
 }
 
 
@@ -179,7 +178,7 @@ void executeServer(){
     }
 
     SYSCALL(close(fdServerSocket), "close");
-
+    exit(0);
 }
 
 
@@ -254,11 +253,11 @@ int estimate(int fdClient){
         connectedClients[nClients-1].client_id = newClientID;
         connectedClients[nClients-1].t = ms;
         connectedClients[nClients-1].estSecret = -1;
-        fprintf(stdout, "SERVER\t%d\tINCOMING FROM\t%lx\t@\t%ld\n", servernum, connectedClients[nClients-1].client_id, connectedClients[nClients-1].t);
+        fprintf(stdout, "SERVER %d INCOMING FROM %lx @ %ld\n", servernum, connectedClients[nClients-1].client_id, connectedClients[nClients-1].t);
     }
     else{       //already in the list, index >= 0
 
-        fprintf(stdout, "SERVER\t%d\tINCOMING FROM\t%lx\t@\t%ld\n", servernum, connectedClients[index].client_id, ms);
+        fprintf(stdout, "SERVER %d INCOMING FROM %lx @ %ld\n", servernum, connectedClients[index].client_id, ms);
 
         int tmp_est = (int)(ms - connectedClients[index].t);
         connectedClients[index].t = ms;
