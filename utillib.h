@@ -63,7 +63,7 @@
 
 
 #define RANDOM(X) rand() % (X)                        //http://www.pierotofy.it/pages/guide_tutorials/C/Generazione_di_numeri_casuali/
-#define RANDOMIZE srand((unsigned)time(NULL))
+#define RANDOMIZE(PID) srand((unsigned)time(NULL) * (PID))
 
 
 
