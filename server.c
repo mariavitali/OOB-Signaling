@@ -131,7 +131,6 @@ void executeServer(){
 
     if(fdServerSocket > fdmax)
         fdmax = fdServerSocket;
-    fprintf(stdout, "fd max è %d\n", fdmax);
     
     FD_ZERO(&set);      //set to zero
     FD_ZERO(&rdset);
@@ -140,7 +139,12 @@ void executeServer(){
     while(!terminate){
         //get select mask ready (at every new iteration, cause is modified by select)
         rdset = set;
-        SYSCALL(select(fdmax+1, &rdset, NULL, NULL, NULL), "select");
+        //SYSCALL(select(fdmax+1, &rdset, NULL, NULL, NULL), "select");
+        errno=0;
+        if((select(fdmax+1, &rdset, NULL, NULL, NULL)) < 0){
+            if(errno == EINTR) continue;
+            exit(errno);
+        }
         
 
         //check for new requests from file descriptors
@@ -161,7 +165,6 @@ void executeServer(){
                     //new read request
                     fdClient = index;
                     if((estimate(fdClient)) != 0){
-                        //exit(0);
                         close(fdClient);
                         FD_CLR(fdClient, &set);
 
@@ -186,15 +189,16 @@ void executeServer(){
 int estimate(int fdClient){
     msg_t message;
     int index;          //index of client in connectedClients
+    int r;
 
-    if(readn(fdClient, &message.len, sizeof(int)) < 0){     // nel nostro caso viene mandato 8 oppure 0
+    if((r = readn(fdClient, &message.len, sizeof(int))) < 0){     // nel nostro caso viene mandato 8 oppure 0
         perror("read");
         return -1;
     }
 
     printf("len: %d\n", message.len);
 
-    if(readn(fdClient, &message.id, ID_SIZE) < 0){
+    if((r = readn(fdClient, &message.id, ID_SIZE)) < 0){
         perror("read");
         return -1;
     }
@@ -202,7 +206,7 @@ int estimate(int fdClient){
     //conversion from network byte order to host byte order
     uint64_t newClientID = NTOHLL(message.id);
 
-    if(message.len <= 0){
+    if(message.len <= 0 || r <= 0){
         //client closed connection
         
         if((index = member(newClientID, connectedClients)) >= 0){
@@ -220,7 +224,6 @@ int estimate(int fdClient){
                 exit(EXIT_FAILURE);
             }
 
-            //free(newinfo);
             //delete client from connectedClients
             est_t tmp;
             tmp = connectedClients[index];
