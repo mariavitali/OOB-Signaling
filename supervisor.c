@@ -46,9 +46,6 @@ int main(int argc, char* argv[]){
     //set SIGINT && SIGALRM handler
     setHandler();
 
-    //supervisor's stdout redirection
-    //????????????????????????????????????????
-
     fprintf(stdout, "SUPERVISOR STARTING %d\n", k);
     manageServer(k);
 
@@ -71,6 +68,16 @@ void manageServer(int k){
         SYSCALL((pidChild = fork()), "fork");
         if(pidChild == 0){
             //figlio
+                        
+            /*
+            se lo apro in append non funziona perchè dovrei gestire l'accesso simultaneo in scrittura di più server al file*/
+            int fd = open("./outserver.log", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+
+            dup2(fd, 1);   // make stdout go to file
+            dup2(fd, 2);   // make stderr go to file
+
+            close(fd);
+        
 
             //close reading pipe
             SYSCALL(close(pipeServer[i].fd[0]), "closing reading pipe");
@@ -94,7 +101,7 @@ void manageServer(int k){
         }
     }
 
-    RANDOMIZE;
+    RANDOMIZE(1);
 
     while(1){
         //check read random pipe
