@@ -76,12 +76,12 @@ int main(int argc, char* argv[]){
 
 
     //generate secret and random 64-bit id
-    RANDOMIZE;
+    RANDOMIZE(getpid());
     secret = RANDOM(3000) + 1;
     id = rand64bit();
 
     fprintf(stdout, "CLIENT %lx SECRET %d\n", id, secret);
-
+    
     //initialize structure timespec for nanosleep based on secret
     
     t.tv_sec = (int)(secret/1000);
@@ -118,7 +118,7 @@ uint64_t rand64bit()
 //connects via socket to p of the k available servers
 void connectToServers(int p, int k){
 
-    RANDOMIZE;
+    RANDOMIZE(getpid());
     int noduplicate[p];
 
     for(int i=0; i<p; i++){
@@ -160,7 +160,7 @@ void sendMessages(int w, int p, uint64_t id){
     uint64_t id_nbo = HTONLL(id);
     int len, random;
 
-    RANDOMIZE;
+    RANDOMIZE(getpid());
 
     for(int i=0; i<w; i++){
         //select one of the p connected servers
