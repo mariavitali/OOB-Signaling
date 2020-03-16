@@ -8,9 +8,15 @@ errSum=0
 avgErr=0
 
 #controllo che i parametri di input siano file ed esistano
-if [[! -f $1 || ! -f $2 ]]; then
-    echo "ERROR: wrong input files"
+if ! [[ -f $1 ]]; then
+    echo "ERROR: wrong input files (first)"
     exit 1
+fi
+
+if ! [[ -f $2 ]]; then
+    echo "ERROR: wrong input files (second)"
+    exit 1
+fi
 
 #apro i file in lettura
 exec 3<$1
@@ -38,7 +44,7 @@ while read -u 3 line; do
     j=0
     found=0
     while [[ $j<${nClients} && ${found}==0 ]]; do
-        if [[ "$line" == *"${arrayid[$j]}"* ]] then
+        if [[ "$line" == *"${arrayid[$j]}"* ]]; then
             found=1
             estimates[$i]=${LINEA[2]}
         else ((j++))
@@ -65,4 +71,4 @@ echo "Total clients and estimates: ${nClients}"
 echo "Supervisor correct estimates: ${correctEst}/${nClients}"
 echo "Supervisor wrong estimates: $((${nClients} - ${correctEst}))/${nClients}"
 echo "Average error: ${avgErr}"
-
+echo "DONE!"
