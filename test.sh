@@ -2,7 +2,7 @@
 
 echo "Start test..."
 
-./supervisor 3 1>outsupervisor.log 2>errsupervisor.log &
+./supervisor 8 >>outsupervisor.log 2>>errsupervisor.log &
 
 superv=$!
 
@@ -12,8 +12,8 @@ sleep 2
 
 echo "Starting clients..."
 for ((i=0 ; i < 10; i++)); do
-    ./client 2 3 7 >>outclients.log &
-    ./client 2 3 7 >>outclients.log &
+    ./client 5 8 20 >>outclients.log &
+    ./client 5 8 20 >>outclients.log &
     sleep 1
 done
 
