@@ -94,6 +94,7 @@ int main(int argc, char* argv[]){
     fprintf(stdout, "CLIENT %lx DONE.\n", id);
     free(selectedServers);
     
+    fflush(NULL);    
     return 0;
 
 }
@@ -148,8 +149,6 @@ void connectToServers(int p, int k){
                 sleep(1);
             }
         }
-
-        //fprintf(stdout, "connected to server %d\n", numserver);
 
     }
 
