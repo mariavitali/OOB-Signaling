@@ -10,10 +10,11 @@
 
 
 volatile sig_atomic_t sigIntCounter = 0;    //number of SIGINT received
-static pipefd * pipeServer;            //array to save connection pipe to all servers
-static pid_t * pidServer;              //array to save servers' pid
-static infotable table;                //info list to save best secret estimates
-static int k;                          //number of servers
+volatile sig_atomic_t closed = 0;
+static pipefd * pipeServer;                 //array to save connection pipe to all servers
+static pid_t * pidServer;                   //array to save servers' pid
+static infotable table;                     //info list to save best secret estimates
+static int k;                               //number of servers
 
 void manageServer(int k);
 static infotable updateInfotable(infotable t, info newinfo);
@@ -49,7 +50,9 @@ int main(int argc, char* argv[]){
     fprintf(stdout, "SUPERVISOR STARTING %d\n", k);
     manageServer(k);
 
-
+    //close supervisor and servers: cleanup
+    closeSupervisor();
+    return 0;
 }
 
 
@@ -67,7 +70,7 @@ void manageServer(int k){
 
         SYSCALL((pidChild = fork()), "fork");
         if(pidChild == 0){
-            //figlio
+            //child process
                         
             /*
             se lo apro in append non funziona perchè dovrei gestire l'accesso simultaneo in scrittura di più server al file*/
@@ -77,7 +80,6 @@ void manageServer(int k){
             dup2(fd, 2);   // make stderr go to file
 
             close(fd);
-        
 
             //close reading pipe
             SYSCALL(close(pipeServer[i].fd[0]), "closing reading pipe");
@@ -88,7 +90,7 @@ void manageServer(int k){
             exit(errno);
         }
         else{
-            //padre, pidChild > 0
+            //parent process, pidChild > 0
             pidServer[i] = pidChild;
 
             //closing writing pipe
@@ -103,7 +105,7 @@ void manageServer(int k){
 
     RANDOMIZE(1);
 
-    while(1){
+    while(!closed){
         //check read random pipe
         int randomIndex = RANDOM(k);
         int nread = 0;;
@@ -179,8 +181,7 @@ static void sigIntManager(int signum){
             alarm(1);       //start 1 sec timer
         }
         else if(sigIntCounter == 2){        //gets here only if 1 second time has not expired
-            printInfotable(table, stdout);          //print info table on stdout
-            closeSupervisor();
+            closed=1;            
         }
     }
 
@@ -206,7 +207,8 @@ static void setHandler(){
 
 void closeSupervisor(){
 
-    //devo ignorare gli altri segnali mentre spengo tutto????????????
+    printInfotable(table, stdout);          //print info table on stdout
+    fprintf(stdout, "SUPERVISOR EXITING\n");
 
     for(int i=0; i<k; i++){
         SYSCALL(kill(pidServer[i], SIGTERM), "kill");
@@ -223,5 +225,6 @@ void closeSupervisor(){
     //free(table);
     free(pidServer);
     free(pipeServer);
-    _exit(0);
+    fflush(NULL);
+    exit(0);
 }
