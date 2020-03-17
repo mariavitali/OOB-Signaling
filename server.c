@@ -248,7 +248,7 @@ int estimate(int fdClient){
             CHECKNULL((connectedClients=malloc(sizeof(est_t))), "malloc");
         }
         //reallocation of memory
-        else CHECKNULL((realloc((est_t*)connectedClients, nClients*sizeof(est_t))), "realloc");
+        else CHECKNULL((connectedClients = realloc((est_t*)connectedClients, nClients*sizeof(est_t))), "realloc");
 
         //CALCOLO DEL TEMPO CORRENTE IN MILLISECONDI
 
