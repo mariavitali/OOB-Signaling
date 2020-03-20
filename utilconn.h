@@ -23,13 +23,14 @@
 #endif
 
 //found at https://stackoverflow.com/questions/3022552/is-there-any-standard-htonl-like-function-for-64-bits-integers-in-c
+//convert 64 bit HostTONetwork byte order
 #define HTONLL(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
+//convert 64 bit NetworkTOHost byte order
 #define NTOHLL(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 
 typedef struct msg {
     int len;
-    //char *str;
     uint64_t id;
 } msg_t;
 

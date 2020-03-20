@@ -5,9 +5,6 @@
  controlli errori syscall, ecc
 */
 
-/*FARE 2 DIVERSE LIBRERIE. UNA PER COMUNICAZIONI SUPERVISOR-SERVER
- L'ALTRA DI CONNESSIONE SOCKET PER COMUNICAZIONI CLIENT-SERVER*/
-
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -19,6 +16,8 @@
 #include <errno.h>
 #include <stdint.h>
 #include <time.h>
+
+
 
 #if !defined(BUFSIZE)
 #define BUFSIZE 256
@@ -62,25 +61,26 @@
     }
 
 
-#define RANDOM(X) rand() % (X)                        //http://www.pierotofy.it/pages/guide_tutorials/C/Generazione_di_numeri_casuali/
+#define RANDOM(X) rand() % (X)
 #define RANDOMIZE(PID) srand((unsigned)time(NULL) * (PID))
 
 
 
-//new data structures
+
+//data structure to save pipe file descriptors
 typedef struct pipefd{
     int fd[2];
 }pipefd;
 
 
-//struttura dati per memorizzare le stime del server
+//data structure for server estimates
 typedef struct estimate{
     uint64_t client_id;
     long t;      //number of milliseconds seconds since the epoch
     int estSecret;
 }est_t;
 
-//struttura dati per memorizzare le stime del supervisor dopo aver raccolto le informazioni inviate da vari server
+//data structure for supervisor estimates (computed after receiving info from different servers)
 typedef struct info{
     uint64_t client_id;
     int estimatedSecret;
@@ -90,7 +90,11 @@ typedef struct info{
 
 typedef info* infotable;
 
-//supervisor function to print info table
+
+
+
+
+//function to print info table
 void printInfotable(infotable t, FILE* where){
     infotable curr;
     curr = t;
