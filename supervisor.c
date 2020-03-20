@@ -74,7 +74,9 @@ void manageServer(int k){
                         
             /*
             se lo apro in append non funziona perchè dovrei gestire l'accesso simultaneo in scrittura di più server al file*/
+            //int fd = open("./outserver.log", O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);            
             int fd = open("./outserver.log", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+
 
             dup2(fd, 1);   // make stdout go to file
             dup2(fd, 2);   // make stderr go to file
