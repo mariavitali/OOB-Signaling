@@ -34,6 +34,7 @@ typedef struct msg {
     uint64_t id;
 } msg_t;
 
+
 static inline int readn(long fd, void *buf, size_t size) {
     size_t left = size;
     int r;
@@ -49,6 +50,7 @@ static inline int readn(long fd, void *buf, size_t size) {
     }
     return size;
 }
+
 
 static inline int writen(long fd, void *buf, size_t size) {
     size_t left = size;

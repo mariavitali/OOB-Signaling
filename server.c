@@ -39,7 +39,7 @@ void cleanup();
 
 int main(int argc, char* argv[]){
 
-    //atexit pulizia
+    //atexit clean
     atexit(cleanup);
 
     //check main arguments
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]){
         exit(-1);
     }
 
-    //set signal handler
+    //set SIGTERM signal handler
     struct sigaction action;
     memset(&action, 0, sizeof(action));
     action.sa_handler = sighandler;
@@ -137,9 +137,8 @@ void executeServer(){
     FD_SET(fdServerSocket, &set);
 
     while(!terminate){
-        //get select mask ready (at every new iteration, cause is modified by select)
+        //get select mask ready (at every new iteration, because is modified by select)
         rdset = set;
-        //SYSCALL(select(fdmax+1, &rdset, NULL, NULL, NULL), "select");
         errno=0;
         if((select(fdmax+1, &rdset, NULL, NULL, NULL)) < 0){
             if(errno == EINTR) continue;
@@ -191,7 +190,7 @@ int estimate(int fdClient){
     int index;          //index of client in connectedClients
     int r;
 
-    if((r = readn(fdClient, &message.len, sizeof(int))) < 0){     // nel nostro caso viene mandato 8 oppure 0
+    if((r = readn(fdClient, &message.len, sizeof(int))) < 0){ 
         perror("read");
         return -1;
     }
@@ -231,16 +230,17 @@ int estimate(int fdClient){
             connectedClients[nClients-1] = tmp;
             nClients--;
         }
-        return 1;   //client closed connection
+        return 1;
     }
 
-    //nuova stima ricevuta
+    //new estimate received
     long ms;
     struct timespec spec;
     clock_gettime(CLOCK_REALTIME, &spec);
     ms = (long)(spec.tv_sec * 1000) + (long)(spec.tv_nsec / 1.0e6);
 
-    if((index = member(newClientID, connectedClients)) < 0){         //new client
+    if((index = member(newClientID, connectedClients)) < 0){
+        //new client         
         nClients = nClients + 1;
 
         //first client
@@ -250,15 +250,14 @@ int estimate(int fdClient){
         //reallocation of memory
         else CHECKNULL((connectedClients = realloc((est_t*)connectedClients, nClients*sizeof(est_t))), "realloc");
 
-        //CALCOLO DEL TEMPO CORRENTE IN MILLISECONDI
-
         //add new client at the end of the array
         connectedClients[nClients-1].client_id = newClientID;
         connectedClients[nClients-1].t = ms;
         connectedClients[nClients-1].estSecret = -1;
         fprintf(stdout, "SERVER %d INCOMING FROM %lx @ %ld\n", servernum, connectedClients[nClients-1].client_id, connectedClients[nClients-1].t);
     }
-    else{       //already in the list, index >= 0
+    else{       
+        //already in the list, index >= 0
 
         fprintf(stdout, "SERVER %d INCOMING FROM %lx @ %ld\n", servernum, connectedClients[index].client_id, ms);
 
@@ -279,14 +278,14 @@ int estimate(int fdClient){
 }
 
 
-// update max file descriptor
+//update max file descriptor
 int updatemax(fd_set set, int fdmax) {
     for(int i=(fdmax-1);i>=0;--i)
 	if (FD_ISSET(i, &set)) return i;
     return -1;
 }
 
-
+//if id is in list return index>=0 (position in the array), else return -1
 int member(uint64_t id, est_t* list){
     for(int i = 0; i < nClients; i++){
         if(list[i].client_id == id) 

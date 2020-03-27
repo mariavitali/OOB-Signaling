@@ -2,7 +2,7 @@
 #define UTILLIB_H_
 
 /*libreria usata come appoggio per funzioni ausiliarie, funzioni di stima, stampe,
- controlli errori syscall, ecc
+ controlli errori syscall
 */
 
 #include <stdarg.h>
@@ -89,8 +89,6 @@ typedef struct info{
 }info;
 
 typedef info* infotable;
-
-
 
 
 

@@ -20,10 +20,6 @@ if ! [[ -f $2 ]]; then
     exit 1
 fi
 
-#apro i file in lettura
-#exec 3<$1
-#exec 4<$2
-
 echo "Inizio la misura..."
 
 declare -a arrayid
@@ -35,8 +31,6 @@ declare -A estimates
 while IFS= read -r line; do
     ROW=($line)
     if [[ "$line" == *"SECRET"* ]]; then
-        #avevo fatto diversamente ma confrontandomi con i colleghi, mi hanno fatto notare che gli array possono essere sparsi
-        #usare questa caratteristica degli array bash mi è sembrato molto conveniente e intelligente
         id=${ROW[1]}
         secrets[$id]=${ROW[3]}
         ((nClients++))

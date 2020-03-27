@@ -18,7 +18,7 @@ static int k;                               //number of servers
 
 void manageServer(int k);
 static infotable updateInfotable(infotable t, info newinfo);
-static void sigIntManager(int signum);
+static void sigManager(int signum);
 static void setHandler();
 void closeSupervisor();
 
@@ -30,13 +30,14 @@ int main(int argc, char* argv[]){
     pidServer = NULL;          
     table = NULL;
 
-    /*  check for correct main arguments
-        k  ->  number of servers to be activated (int)  */
+    //check for correct main arguments
+    //k  ->  number of servers to be activated (int)
     if(argc != 2){
         fprintf(stderr, "Use: %s   (int) k\n", argv[0]);
         exit(-1);
     }
 
+    //convert to int
     errno = 0;
     k = strtol(argv[1], NULL, 10);
     if(errno != 0){
@@ -47,6 +48,7 @@ int main(int argc, char* argv[]){
     //set SIGINT && SIGALRM handler
     setHandler();
 
+    //start supervisor activity
     fprintf(stdout, "SUPERVISOR STARTING %d\n", k);
     manageServer(k);
 
@@ -71,9 +73,9 @@ void manageServer(int k){
         SYSCALL((pidChild = fork()), "fork");
         if(pidChild == 0){
             //child process
-                        
-            /*
-            se lo apro in append non funziona perchè dovrei gestire l'accesso simultaneo in scrittura di più server al file*/
+
+
+            //redirect child stdout and stderr  
             //int fd = open("./outserver.log", O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);            
             int fd = open("./outserver.log", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 
@@ -91,21 +93,20 @@ void manageServer(int k){
             perror("execl");
             exit(errno);
         }
-        else{
-            //parent process, pidChild > 0
+        else{       //parent process, pidChild > 0
             pidServer[i] = pidChild;
 
-            //closing writing pipe
+            //close writing pipe
             SYSCALL(close(pipeServer[i].fd[1]), "closing writing pipe");
             
-            //set non blocking read
+            //set non-blocking read
             int flags = fcntl(pipeServer[i].fd[0], F_GETFL, 0);
             fcntl(pipeServer[i].fd[0], F_SETFL, flags | O_NONBLOCK);
 
         }
     }
 
-    RANDOMIZE(1);
+    RANDOMIZE(getpid());
 
     while(!closed){
         //check read random pipe
@@ -130,7 +131,7 @@ void manageServer(int k){
 
 
 static infotable updateInfotable(infotable t, info newinfo){
-    //info list is empty
+    //info list is empty, add first element
     if(t == NULL){
         info* newelem = malloc(sizeof(info));
         newelem->client_id = newinfo.client_id;
@@ -141,6 +142,7 @@ static infotable updateInfotable(infotable t, info newinfo){
         return t;
     }
     
+    //infolist is not empty, search for newinfo.client_id
     int exists = 0;
     info* curr = t;
     if(!exists && (curr!=NULL)){
@@ -175,8 +177,8 @@ static infotable updateInfotable(infotable t, info newinfo){
 }
 
 
-
-static void sigIntManager(int signum){
+//handler SIGINT e SIGALRM
+static void sigManager(int signum){
     if(signum == SIGINT){
         sigIntCounter++;
         if(sigIntCounter == 1){
@@ -197,16 +199,17 @@ static void sigIntManager(int signum){
 }
 
 
-/*set signal handlers*/
+//set signal handlers
 static void setHandler(){
     struct sigaction action;
     memset(&action, 0, sizeof(action));
-    action.sa_handler = sigIntManager;
+    action.sa_handler = sigManager;
     SYSCALL((sigaction(SIGINT, &action, NULL)), "sigaction");
     SYSCALL((sigaction(SIGALRM, &action, NULL)), "sigaction");
 }
 
 
+//close supervisor, notify servers to terminate, free memory
 void closeSupervisor(){
 
     printInfotable(table, stdout);          //print info table on stdout
@@ -224,7 +227,6 @@ void closeSupervisor(){
         curr = table;
     }
 
-    //free(table);
     free(pidServer);
     free(pipeServer);
     fflush(NULL);

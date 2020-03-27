@@ -39,7 +39,7 @@ int main(int argc, char* argv[]){
         exit(EXIT_FAILURE);
     }
 
-    //SIGPIPE handler ----> spiegare perchè è necessario nella relazione
+    //SIGPIPE handler
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = sigPipeManager;
@@ -83,7 +83,6 @@ int main(int argc, char* argv[]){
     fprintf(stdout, "CLIENT %lx SECRET %d\n", id, secret);
     
     //initialize structure timespec for nanosleep based on secret
-    
     t.tv_sec = (int)(secret/1000);
     t.tv_nsec = (secret % 1000) * 1000000;
 
@@ -154,6 +153,7 @@ void connectToServers(int p, int k){
 
 }
 
+//sends w messages to p selected servers randomly
 void sendMessages(int w, int p, uint64_t id){
     //convert id to network byte order
     uint64_t id_nbo = HTONLL(id);
@@ -166,8 +166,7 @@ void sendMessages(int w, int p, uint64_t id){
         random = RANDOM(p);
         len = ID_SIZE;
 
-        //fprintf(stdout, "[CLIENT] sending length %d and id %lx\n", len, id_nbo);
-
+        //write message onto socket
         writen(selectedServers[random], &len, sizeof(int));
         writen(selectedServers[random], &id_nbo, ID_SIZE);
 
@@ -179,7 +178,6 @@ void sendMessages(int w, int p, uint64_t id){
     //close client
     for(int i = 0; i<p; i++){
         len = 0;
-        //fprintf(stdout, "[CLIENT] sending length %d and id %lx\n", len, id_nbo);
 
         writen(selectedServers[i], &len, sizeof(int));
         writen(selectedServers[i], &id_nbo, ID_SIZE);

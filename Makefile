@@ -22,6 +22,9 @@ TARGETS		=	supervisor \
 all: $(TARGETS)
 
 cleanTestFiles:
+	#checking if there are previous test files...
+	#if errors are displayed, it means no previously created files were found
+	#else it just deletes them to make room for new files and measurements
 	-rm *.log
 
 test: cleanTestFiles
